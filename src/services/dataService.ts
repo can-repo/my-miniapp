@@ -1,36 +1,86 @@
 // src/services/dataService.ts
+import http from './http';
+import type { tGsInhouse } from '@/types/gsInHouse';
 
-// Tipe data (Interface)
-export interface SalesData {
-  id: number;
-  product: string;
-  amount: number;
-  date: string;
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
 }
 
-// Mock Data
-const MOCK_DATA: SalesData[] = [
-  { id: 1, product: "Kopi Susu", amount: 150, date: "2023-01-01" },
-  { id: 2, product: "Teh Tarik", amount: 100, date: "2023-01-02" },
-  { id: 3, product: "Roti Bakar", amount: 200, date: "2023-01-03" },
-  { id: 4, product: "Nasi Goreng", amount: 300, date: "2023-01-04" },
-  { id: 5, product: "Mie Ayam", amount: 250, date: "2023-01-05" },
-];
-
-// Service untuk simulasi API Call
 export const dataService = {
-  // Simulasi GET data (Browse Data)
-  async getAll(): Promise<SalesData[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(MOCK_DATA), 500); // Simulasi latency network
-    });
+  // GET Data dari API
+  async getAll(): Promise<tGsInhouse[]> {
+    try {
+      // Endpoint untuk GET: http://192.168.1.10:1968/api/1.0/json/gs-inhouse?token=...
+      console.log('Mengakses endpoint:', `${import.meta.env.VITE_API_BASE_URL}/gs-inhouse`);
+      const response = await http.get<any>('/gs-inhouse'); // Gunakan 'any' sementara untuk melihat struktur sebenarnya
+      console.log('Response dari API:', response);
+      console.log('Data API mentah:', response.data);
+
+      // Cek apakah respons adalah HTML (berarti bukan API yang benar)
+      if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+        console.error('API mengembalikan halaman HTML bukan JSON:', response.data.substring(0, 200) + '...');
+        throw new Error('Server API tidak merespons dengan JSON. Mungkin URL API salah atau server offline.');
+      }
+
+      // Cek beberapa kemungkinan struktur respons
+      let dataToReturn: tGsInhouse[] = [];
+
+      // Cek apakah respons adalah array langsung
+      if (Array.isArray(response.data)) {
+        dataToReturn = response.data;
+        console.log('Respons adalah array langsung');
+      }
+      // Cek apakah respons mengikuti format ApiResponse
+      else if (response.data && typeof response.data === 'object' && response.data.data !== undefined) {
+        dataToReturn = response.data.data || [];
+        console.log('Respons mengikuti format ApiResponse standar');
+      }
+      // Cek struktur umum lainnya seperti results
+      else if (response.data && response.data.results) {
+        dataToReturn = response.data.results;
+        console.log('Respons menggunakan struktur "results"');
+      }
+      // Cek struktur dengan nama field lain
+      else if (response.data && response.data.gs_inhouse) {
+        dataToReturn = response.data.gs_inhouse;
+        console.log('Respons menggunakan struktur "gs_inhouse"');
+      }
+      else {
+        console.warn('Struktur respons API tidak dikenal:', response.data);
+        dataToReturn = [];
+      }
+
+      console.log('Data yang akan dikembalikan:', dataToReturn);
+      return dataToReturn;
+    } catch (error: any) {
+      console.error("Gagal mengambil data:", error);
+      console.error("Error detail:", error.response || error.message || error);
+      return []; // Return array kosong jika error agar UI tidak crash
+    }
   },
 
-  // Simulasi POST data (Form Submit)
-  async create(payload: Omit<SalesData, 'id'>): Promise<{ success: boolean; message: string }> {
-    return new Promise((resolve) => {
-      console.log("Mengirim ke API External:", payload);
-      setTimeout(() => resolve({ success: true, message: "Data berhasil disimpan!" }), 500);
-    });
+   //POST Data ke API
+   async create(payload: Omit<tGsInhouse, 'id'>): Promise<{ success: boolean; message: string }> {
+    try {
+      // Endpoint untuk POST: http://192.168.1.10:1968/api/1.0/json/gs-inhouse?token=...
+      console.log('Mengirim data ke endpoint:', `${import.meta.env.VITE_API_BASE_URL}/gs-inhouse`);
+      console.log('Payload:', payload);
+      const response = await http.post<ApiResponse<tGsInhouse>>('/gs-inhouse', payload);
+      console.log('Response POST:', response);
+
+      return {
+        success: true,
+        message: response.data.message || 'Data berhasil disimpan ke server!'
+      };
+    } catch (error: any) {
+      console.error("Gagal menyimpan data:", error);
+      console.error("Error POST detail:", error.response || error.message || error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Gagal menghubungi server.'
+      };
+    }
   }
 };

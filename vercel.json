@@ -1,0 +1,6 @@
+  1 {
+   2   "buildCommand": "pnpm install --frozen-lockfile=false && pnpm run build",
+   3   "outputDirectory": "dist",
+   4   "framework": "vite",
+   5   "packageManager": "pnpm@latest"
+   6 }

@@ -1,6 +1,8 @@
-  1 {
-   2   "buildCommand": "pnpm install --frozen-lockfile=false && pnpm run build",
-   3   "outputDirectory": "dist",
-   4   "framework": "vite",
-   5   "packageManager": "pnpm@latest"
-   6 }
+{
+   "buildCommand": "pnpm install --no-frozen-lockfile && pnpm run build",
+    "outputDirectory": "dist",
+    "framework": "vite",
+    "env": {
+    "NODE_VERSION": "20.x"
+  }
+ }
